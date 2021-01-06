@@ -1,0 +1,159 @@
+#Dependencies
+from splinter import Browser
+from bs4 import BeautifulSoup as bs
+import pandas as pd
+
+def scrape_all():
+
+    #Set path and initialize chrome borwser 
+    executable_path = {'chromedriver.exe'}
+    browser = Browser('chrome', executable_path, headless=False)
+
+    titles, news_p = scrape_news(browser)
+    featured_image_url=scrape_image(browser)
+    mars_df=scrape_facts
+    hemispheres=scrape_hemispheres(browser)
+
+    # Run all scraping functions and store results in a dictionary
+    data = {
+        "news_title": titles,
+        "news_paragraph": news_p,
+        "featured_image": featured_image_url,
+        "facts": mars_df,
+        "hemispheres": hemispheres
+    }
+
+    # Stop webdriver and return data
+    browser.quit()
+    return data
+
+
+def scrape_news(browser):
+    #Visit url
+    url = 'https://mars.nasa.gov/news/'
+    browser.visit(url)
+
+    #Convert browser html to soup object
+    html = browser.html
+    news_soup = bs(html, 'html.parser')
+
+    #Create empty lists for titles and paragraphs
+    titles=[]
+    news_p=[]
+
+    #Assign titles to variable
+    title_search=news_soup.find_all('div', class_='content_title')
+    for title in title_search:
+        titles.append(title.text.strip())
+
+    #Assign paragraphs to variable
+    p_search=news_soup.find_all('div', class_='article_teaser_body')
+    for p in p_search:
+        news_p.append(p.text.strip())
+
+    return titles, news_p
+
+
+def scrape_image(browser):  
+    #Visit url
+    url_1 = 'https://www.jpl.nasa.gov/spaceimages/?search=&category=Mars'
+    browser.visit(url_1)
+
+    #Find full size image
+    browser.click_link_by_partial_text('FULL IMAGE')
+
+    #Find full size image
+    browser.click_link_by_partial_text('more info')
+
+    #Convert browser html to soup object
+    html_1 = browser.html
+    pic_soup = bs(html_1, 'lxml')
+
+    #Find featued image url
+    results=pic_soup.find('figure', class_='lede')
+    featured_path=results.a['href']
+    featured_image_url='https://www.jpl.nasa.gov'+featured_path
+
+    return featured_image_url
+
+def scrape_facts():
+    #Enter url
+    url_2 = 'https://space-facts.com/mars/'
+
+    #Use pandas to scrape table
+    tables = pd.read_html(url_2)
+
+    #Select table and clean up
+    mars_df=tables[0]
+    mars_df.columns=["Description", 'Mars']
+    mars_df.set_index("Description", inplace=True)
+
+    #Covert table to html string
+    return mars_df.to_html()
+
+def scrape_hemispheres(browser):
+    #Visit url
+    url_3 = 'https://astrogeology.usgs.gov/search/results?q=hemisphere+enhanced&k1=target&v1=Mars'
+    browser.visit(url_3)
+
+    #Convert browser html to soup object
+    html_3 = browser.html
+    hemi_soup = bs(html_3, 'html.parser')
+
+    #Create list of titles
+    image_titles=[]
+
+    titles=hemi_soup.find_all('img', class_="thumb")
+
+    for title in titles:
+            image_title= title['alt']
+            image_titles.append(image_title)
+
+    #Create list of image urls
+    image_urls=[]
+
+    links=hemi_soup.find_all('a', class_="itemLink product-item")
+
+    for link in links:
+        if (link.img):
+            image_url= 'https://astrogeology.usgs.gov/' +link['href']
+            image_urls.append(image_url)
+
+    #Loop through image_urls to find url for full size image 
+    full_image_urls=[]
+
+    for url in image_urls:
+        browser.visit(url)
+
+        html_4 = browser.html
+        hemi_image_soup = bs(html_4, 'html.parser')
+
+        results = hemi_image_soup.find_all('img', class_='wide-image')
+        relative_img_path = results[0]['src']
+        link = 'https://astrogeology.usgs.gov/' + relative_img_path
+        full_image_urls.append(link)
+
+    #Create list of dictionaries
+    hemispheres=[]
+
+    mars_zip=zip(titles, full_image_urls)
+
+    # Iterate through the zipped object
+    for title, img in mars_zip:
+        mars_dict = {}
+        mars_dict['title'] = title
+        mars_dict['img_url'] = img
+        hemispheres.append(mars_dict)
+
+    return hemispheres
+
+
+
+if __name__ == "__main__":
+
+    # If running as script, print scraped data
+    print(scrape_info())
+
+
+
+
