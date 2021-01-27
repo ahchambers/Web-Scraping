@@ -85,7 +85,7 @@ def scrape_hemispheres(browser):
         hemisphere['title']=element_title.value
         hemisphere_img_urls.append(hemisphere)
         browser.back()
-       
+
     return hemisphere_img_urls
 
 def scrape_all():
@@ -95,7 +95,7 @@ def scrape_all():
     browser = Browser('chrome', executable_path, headless=False)
 
     titles, news_p = scrape_news(browser)
-    featured_image_url=scrape_image(browser)
+    # featured_image_url=scrape_image(browser)
     mars_df=scrape_facts()
     hemi=scrape_hemispheres(browser)
 
@@ -103,7 +103,7 @@ def scrape_all():
     data = {
         "news_title": titles,
         "news_paragraph": news_p,
-        "featured_image": featured_image_url,
+        # "featured_image": featured_image_url,
         "facts": mars_df,
         "hemispheres": hemi
     }
